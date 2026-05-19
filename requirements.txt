@@ -1,0 +1,6 @@
+# Cassandra 可视化管理系统 - Python 3.9 依赖
+# Cassandra 4.1.8 对应驱动版本
+
+Flask>=2.3.0
+Flask-CORS>=4.0.0
+cassandra-driver>=3.28.0

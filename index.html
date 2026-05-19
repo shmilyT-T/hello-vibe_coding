@@ -1,0 +1,2061 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cassandra Manager</title>
+<style>
+/* ════════════════════════════════════════════════════════
+   Apple.com Design System
+   ════════════════════════════════════════════════════════ */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+:root {
+  --apple-white:    #ffffff;
+  --apple-gray-bg:  #f5f5f7;
+  --apple-gray-2:   #e8e8ed;
+  --apple-gray-3:   #d2d2d7;
+  --apple-text-1:    #1d1d1f;
+  --apple-text-2:   #6e6e73;
+  --apple-text-3:   #86868b;
+  --apple-blue:      #0071e3;
+  --apple-blue-h:    #0077ed;
+  --apple-red:       #ff3b30;
+  --apple-green:     #34c759;
+  --apple-orange:    #ff9500;
+  --apple-purple:    #af52de;
+  --apple-radius-sm: 8px;
+  --apple-radius:    12px;
+  --apple-radius-lg: 18px;
+  --apple-radius-xl:  24px;
+  --apple-shadow-sm: 0 2px 8px rgba(0,0,0,0.06);
+  --apple-shadow:    0 4px 20px rgba(0,0,0,0.08), 0 1px 4px rgba(0,0,0,0.04);
+  --apple-shadow-lg: 0 12px 48px rgba(0,0,0,0.12), 0 4px 16px rgba(0,0,0,0.06);
+  --apple-shadow-xl: 0 24px 80px rgba(0,0,0,0.16), 0 8px 32px rgba(0,0,0,0.08);
+  --apple-font:     -apple-system, 'SF Pro Display', 'SF Pro Text', BlinkMacSystemFont, 'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  --apple-mono:     'SF Mono', 'Monaco', 'Consolas', 'Menlo', monospace;
+  --topbar-h: 52px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  font-family: var(--apple-font);
+  background: var(--apple-gray-bg);
+  color: var(--apple-text-1);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow: hidden;
+  height: 100vh;
+}
+
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--apple-gray-3); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--apple-text-3); }
+
+/* ═══════════ APP SHELL ═══════════ */
+#app { height: 100vh; display: flex; flex-direction: column; }
+.page { display: none; flex-direction: column; height: 100vh; }
+.page.active { display: flex; }
+
+/* ═══════════ TOPBAR ═══════════ */
+.topbar {
+  height: var(--topbar-h);
+  background: rgba(255,255,255,0.8);
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  border-bottom: 1px solid rgba(0,0,0,0.06);
+  display: flex;
+  align-items: center;
+  padding: 0 24px;
+  gap: 16px;
+  flex-shrink: 0;
+  z-index: 100;
+}
+.topbar-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--apple-text-1);
+  letter-spacing: -0.2px;
+}
+.topbar-brand svg { width: 20px; height: 20px; }
+.topbar-sep { width: 1px; height: 18px; background: rgba(0,0,0,0.1); flex-shrink: 0; }
+.topbar-conn {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  color: var(--apple-text-2);
+}
+.conn-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--apple-green);
+  box-shadow: 0 0 0 2px rgba(52,199,89,0.2);
+  animation: connPulse 2.5s ease infinite;
+}
+@keyframes connPulse {
+  0%, 100% { box-shadow: 0 0 0 2px rgba(52,199,89,0.2); }
+  50% { box-shadow: 0 0 0 4px rgba(52,199,89,0.1); }
+}
+.topbar-right { margin-left: auto; display: flex; align-items: center; gap: 4px; }
+
+/* ═══════════ BUTTONS ═══════════ */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 7px 16px;
+  font-family: var(--apple-font);
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--apple-text-1);
+  background: rgba(255,255,255,0.8);
+  border: 1px solid rgba(0,0,0,0.1);
+  border-radius: var(--apple-radius-sm);
+  cursor: pointer;
+  outline: none;
+  white-space: nowrap;
+  text-decoration: none;
+  user-select: none;
+  transition: all 0.2s cubic-bezier(0.25,0.1,0.25,1);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+.btn:hover {
+  background: rgba(255,255,255,1);
+  border-color: rgba(0,0,0,0.15);
+  box-shadow: var(--apple-shadow-sm);
+  transform: translateY(-0.5px);
+}
+.btn:active { transform: translateY(0px); box-shadow: none; }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+.btn-primary {
+  color: #fff;
+  background: var(--apple-blue);
+  border-color: transparent;
+  font-weight: 500;
+}
+.btn-primary:hover {
+  background: var(--apple-blue-h);
+  border-color: transparent;
+  box-shadow: 0 4px 12px rgba(0,113,227,0.3);
+}
+
+.btn-ghost {
+  background: transparent;
+  border-color: transparent;
+  color: var(--apple-blue);
+  backdrop-filter: none;
+}
+.btn-ghost:hover {
+  background: rgba(0,113,227,0.06);
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.btn-danger-ghost {
+  background: transparent;
+  border-color: transparent;
+  color: var(--apple-red);
+  backdrop-filter: none;
+}
+.btn-danger-ghost:hover {
+  background: rgba(255,59,48,0.06);
+  border-color: transparent;
+}
+
+.btn-sm { padding: 5px 12px; font-size: 12px; }
+.btn-xs { padding: 3px 10px; font-size: 11px; border-radius: 6px; }
+.btn-icon { padding: 6px 10px; }
+
+/* ═══════════ FORM ELEMENTS ═══════════ */
+.form-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--apple-text-2);
+  margin-bottom: 6px;
+  letter-spacing: -0.1px;
+}
+.form-input, .form-select {
+  width: 100%;
+  padding: 10px 14px;
+  background: var(--apple-white);
+  border: 1.5px solid var(--apple-gray-3);
+  border-radius: var(--apple-radius-sm);
+  font-family: var(--apple-font);
+  font-size: 14px;
+  color: var(--apple-text-1);
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  -webkit-appearance: none;
+}
+.form-input:focus, .form-select:focus {
+  border-color: var(--apple-blue);
+  box-shadow: 0 0 0 4px rgba(0,113,227,0.12);
+}
+.form-input::placeholder { color: var(--apple-text-3); }
+.form-select {
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2386868b' stroke-width='2.5'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 36px;
+}
+.form-textarea {
+  width: 100%;
+  min-height: 140px;
+  padding: 14px;
+  background: #1c1c1e;
+  color: #e5e5ea;
+  border: none;
+  border-radius: var(--apple-radius);
+  font-family: var(--apple-mono);
+  font-size: 13px;
+  line-height: 1.7;
+  resize: vertical;
+  outline: none;
+}
+.form-textarea::placeholder { color: #636366; }
+.form-row { display: grid; gap: 12px; }
+.form-row-2 { grid-template-columns: 1fr 1fr; }
+.form-row-3 { grid-template-columns: 1fr 1fr 1fr; }
+.form-group { margin-bottom: 16px; }
+
+/* ═══════════ BADGE ═══════════ */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: -0.05px;
+}
+.badge-blue   { background: rgba(0,113,227,0.1); color: var(--apple-blue); }
+.badge-red    { background: rgba(255,59,48,0.1); color: var(--apple-red); }
+.badge-green  { background: rgba(52,199,89,0.12); color: #248a3d; }
+.badge-orange { background: rgba(255,149,0,0.12); color: #cc7a00; }
+.badge-purple { background: rgba(175,82,222,0.12); color: #8a2be2; }
+.badge-gray   { background: var(--apple-gray-2); color: var(--apple-text-2); }
+
+/* ═══════════ MODAL ═══════════ */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.38);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+.modal-overlay.show { opacity: 1; pointer-events: all; }
+.modal {
+  background: var(--apple-white);
+  border-radius: var(--apple-radius-xl);
+  width: 520px;
+  max-width: 94vw;
+  max-height: 88vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--apple-shadow-xl);
+  transform: scale(0.96) translateY(12px);
+  transition: transform 0.3s cubic-bezier(0.34,1.2,0.64,1);
+}
+.modal-overlay.show .modal { transform: scale(1) translateY(0); }
+.modal-lg { width: 680px; }
+.modal-xl { width: 820px; }
+.modal-header {
+  padding: 24px 28px 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+.modal-title {
+  font-size: 21px;
+  font-weight: 600;
+  color: var(--apple-text-1);
+  letter-spacing: -0.3px;
+  line-height: 1.2;
+}
+.modal-subtitle {
+  font-size: 13px;
+  color: var(--apple-text-2);
+  margin-top: 4px;
+  letter-spacing: -0.1px;
+}
+.modal-close {
+  width: 28px; height: 28px;
+  background: var(--apple-gray-2);
+  border: none;
+  border-radius: 50%;
+  color: var(--apple-text-1);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  transition: all 0.2s;
+  flex-shrink: 0;
+  margin-top: -4px;
+}
+.modal-close:hover { background: var(--apple-gray-3); }
+.modal-body {
+  padding: 20px 28px;
+  overflow-y: auto;
+  flex: 1;
+}
+.modal-footer {
+  padding: 16px 28px 24px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-shrink: 0;
+  border-top: 1px solid var(--apple-gray-2);
+}
+
+/* ═══════════ TOAST ═══════════ */
+.toast-container {
+  position: fixed;
+  bottom: 28px;
+  right: 28px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 8px;
+  pointer-events: none;
+}
+.toast {
+  padding: 12px 18px;
+  background: var(--apple-text-1);
+  color: #fff;
+  border-radius: var(--apple-radius);
+  font-size: 13px;
+  font-weight: 400;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+  animation: toastIn 0.35s cubic-bezier(0.34,1.3,0.64,1);
+  pointer-events: all;
+  max-width: 380px;
+  letter-spacing: -0.1px;
+}
+.toast-icon { width: 18px; height: 18px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; flex-shrink: 0; }
+.toast-success .toast-icon { background: var(--apple-green); }
+.toast-error   .toast-icon { background: var(--apple-red); }
+.toast-info    .toast-icon { background: var(--apple-blue); }
+.toast-warning .toast-icon { background: var(--apple-orange); }
+@keyframes toastIn { from { transform: translateX(40px) scale(0.9); opacity: 0; } to { transform: translateX(0) scale(1); opacity: 1; } }
+
+/* ═══════════ LOADING ═══════════ */
+.spinner {
+  width: 16px; height: 16px;
+  border: 2px solid var(--apple-gray-3);
+  border-top-color: var(--apple-blue);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading { display: inline-flex; align-items: center; gap: 8px; color: var(--apple-text-2); font-size: 13px; }
+
+/* ═══════════ EMPTY STATE ═══════════ */
+.empty-state { text-align: center; padding: 56px 24px; }
+.empty-icon-wrap {
+  width: 64px; height: 64px;
+  margin: 0 auto 20px;
+  background: var(--apple-gray-2);
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.empty-icon-wrap svg { width: 28px; height: 28px; color: var(--apple-text-3); }
+.empty-title { font-size: 19px; font-weight: 600; color: var(--apple-text-1); margin-bottom: 6px; letter-spacing: -0.3px; }
+.empty-sub { font-size: 13px; color: var(--apple-text-2); line-height: 1.5; margin-bottom: 20px; }
+
+/* ═══════════ PANEL ═══════════ */
+.panel { display: none; flex-direction: column; height: 100%; }
+.panel.active { display: flex; }
+.panel-header {
+  padding: 32px 40px 24px;
+  border-bottom: 1px solid var(--apple-gray-2);
+  background: var(--apple-white);
+  flex-shrink: 0;
+}
+.panel-title { font-size: 28px; font-weight: 700; color: var(--apple-text-1); letter-spacing: -0.4px; }
+.panel-subtitle { font-size: 13px; color: var(--apple-text-2); margin-top: 5px; letter-spacing: -0.1px; }
+.panel-actions { display: flex; gap: 8px; flex-shrink: 0; align-items: center; margin-top: 16px; }
+.panel-body { flex: 1; overflow-y: auto; padding: 32px 40px; }
+
+/* ═══════════ MAIN LAYOUT ═══════════ */
+.main-layout { display: flex; flex: 1; overflow: hidden; }
+
+/* SIDEBAR */
+.sidebar {
+  width: 256px;
+  background: rgba(255,255,255,0.7);
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  border-right: 1px solid rgba(0,0,0,0.06);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.sidebar-header {
+  padding: 16px 16px 10px;
+  flex-shrink: 0;
+}
+.sidebar-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--apple-text-3);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 0 8px;
+  margin-bottom: 6px;
+}
+.sidebar-body { flex: 1; overflow-y: auto; padding: 4px 8px 16px; }
+
+.sidebar-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 7px 10px;
+  border-radius: var(--apple-radius-sm);
+  cursor: pointer;
+  color: var(--apple-text-1);
+  font-size: 13px;
+  font-weight: 400;
+  transition: background 0.15s;
+  user-select: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sidebar-item:hover { background: var(--apple-gray-2); }
+.sidebar-item.active { background: var(--apple-gray-bg); font-weight: 500; }
+.sidebar-item svg { width: 15px; height: 15px; flex-shrink: 0; color: var(--apple-text-2); }
+
+.sidebar-group { margin-bottom: 2px; }
+.sidebar-group-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  border-radius: var(--apple-radius-sm);
+  cursor: pointer;
+  color: var(--apple-text-1);
+  font-size: 13px;
+  font-weight: 500;
+  transition: background 0.15s;
+  user-select: none;
+}
+.sidebar-group-header:hover { background: var(--apple-gray-2); }
+.sidebar-group-header svg { width: 13px; height: 13px; color: var(--apple-text-3); transition: transform 0.2s; flex-shrink: 0; }
+.sidebar-group.open > .sidebar-group-header svg { transform: rotate(90deg); }
+.sidebar-group-body { display: none; padding-left: 10px; }
+.sidebar-group.open > .sidebar-group-body { display: block; }
+
+.sidebar-table-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 10px 5px 24px;
+  border-radius: var(--apple-radius-sm);
+  cursor: pointer;
+  color: var(--apple-text-2);
+  font-size: 12.5px;
+  transition: all 0.15s;
+  user-select: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sidebar-table-item:hover { background: var(--apple-gray-2); color: var(--apple-text-1); }
+.sidebar-table-item.active { background: rgba(0,113,227,0.08); color: var(--apple-blue); font-weight: 500; }
+.sidebar-table-item svg { width: 13px; height: 13px; flex-shrink: 0; }
+
+.sidebar-divider { height: 1px; background: rgba(0,0,0,0.05); margin: 8px 10px; }
+
+/* MAIN CONTENT */
+.main-content {
+  flex: 1;
+  overflow-y: auto;
+  background: var(--apple-gray-bg);
+}
+
+/* ═══════════ LOGIN PAGE ═══════════ */
+#loginPage {
+  background: var(--apple-white);
+  align-items: center;
+  justify-content: center;
+  overflow: auto;
+  padding: 40px 20px;
+}
+
+/* Hero section */
+.login-hero {
+  text-align: center;
+  margin-bottom: 40px;
+}
+.login-logo-wrap {
+  width: 72px; height: 72px;
+  margin: 0 auto 24px;
+  background: linear-gradient(135deg, #1d1d1f, #3a3a3c);
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+}
+.login-logo-wrap svg { width: 36px; height: 36px; color: #fff; }
+.login-hero-title { font-size: 32px; font-weight: 700; color: var(--apple-text-1); letter-spacing: -0.5px; margin-bottom: 8px; }
+.login-hero-sub { font-size: 15px; color: var(--apple-text-2); line-height: 1.5; max-width: 400px; margin: 0 auto; }
+
+/* Tabs */
+.login-tabs {
+  display: flex;
+  background: var(--apple-gray-bg);
+  border-radius: var(--apple-radius);
+  padding: 4px;
+  margin-bottom: 28px;
+  gap: 4px;
+}
+.login-tab {
+  flex: 1;
+  padding: 9px 16px;
+  cursor: pointer;
+  color: var(--apple-text-2);
+  font-family: var(--apple-font);
+  font-size: 13px;
+  font-weight: 500;
+  background: transparent;
+  border: none;
+  border-radius: calc(var(--apple-radius) - 2px);
+  transition: all 0.2s;
+}
+.login-tab.active {
+  background: var(--apple-white);
+  color: var(--apple-text-1);
+  box-shadow: var(--apple-shadow-sm);
+}
+.login-panel { display: none; }
+.login-panel.active { display: block; }
+
+/* Login card */
+.login-card {
+  background: var(--apple-white);
+  border-radius: var(--apple-radius-xl);
+  padding: 32px;
+  width: 460px;
+  max-width: 100%;
+  box-shadow: var(--apple-shadow-lg);
+  border: 1px solid rgba(0,0,0,0.04);
+}
+
+/* Saved connections */
+.saved-list { display: flex; flex-direction: column; gap: 8px; max-height: 320px; overflow-y: auto; }
+.saved-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: var(--apple-gray-bg);
+  border-radius: var(--apple-radius);
+  cursor: pointer;
+  transition: all 0.2s;
+  gap: 12px;
+}
+.saved-item:hover { background: var(--apple-gray-2); box-shadow: var(--apple-shadow-sm); }
+.saved-item-info { flex: 1; min-width: 0; }
+.saved-item-name { font-size: 14px; font-weight: 500; color: var(--apple-text-1); margin-bottom: 2px; }
+.saved-item-host { font-size: 12px; color: var(--apple-text-3); font-family: var(--apple-mono); }
+.saved-item-btns { display: flex; gap: 6px; flex-shrink: 0; }
+
+.login-alert {
+  margin-top: 14px;
+  padding: 12px 16px;
+  border-radius: var(--apple-radius);
+  font-size: 13px;
+  display: none;
+  align-items: center;
+  gap: 8px;
+}
+.login-alert.show { display: flex; }
+.login-alert.success { background: rgba(52,199,89,0.1); color: #248a3d; }
+.login-alert.error   { background: rgba(255,59,48,0.08); color: var(--apple-red); }
+
+/* ═══════════ CARD GRID ═══════════ */
+.card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+
+/* Keyspace card */
+.ks-card {
+  background: var(--apple-white);
+  border-radius: var(--apple-radius-lg);
+  padding: 24px;
+  transition: all 0.25s cubic-bezier(0.25,0.1,0.25,1);
+  border: 1px solid rgba(0,0,0,0.04);
+  box-shadow: var(--apple-shadow-sm);
+  cursor: pointer;
+}
+.ks-card:hover {
+  box-shadow: var(--apple-shadow);
+  transform: translateY(-2px);
+  border-color: rgba(0,0,0,0.08);
+}
+.ks-card-icon {
+  width: 40px; height: 40px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+.ks-card-icon svg { width: 20px; height: 20px; color: #fff; }
+.ks-card-name { font-size: 16px; font-weight: 600; color: var(--apple-text-1); margin-bottom: 8px; letter-spacing: -0.2px; }
+.ks-card-meta { display: flex; flex-direction: column; gap: 6px; margin-bottom: 20px; }
+.ks-meta-row { display: flex; align-items: center; justify-content: space-between; }
+.ks-meta-label { font-size: 12px; color: var(--apple-text-3); }
+.ks-meta-val { font-size: 12px; color: var(--apple-text-2); font-family: var(--apple-mono); font-weight: 500; }
+.ks-card-actions { display: flex; gap: 8px; padding-top: 16px; border-top: 1px solid var(--apple-gray-2); }
+.ks-card-actions .btn { flex: 1; }
+
+/* Table card */
+.tbl-card {
+  background: var(--apple-white);
+  border-radius: var(--apple-radius-lg);
+  overflow: hidden;
+  transition: all 0.25s cubic-bezier(0.25,0.1,0.25,1);
+  border: 1px solid rgba(0,0,0,0.04);
+  box-shadow: var(--apple-shadow-sm);
+}
+.tbl-card:hover {
+  box-shadow: var(--apple-shadow);
+  transform: translateY(-2px);
+  border-color: rgba(0,0,0,0.08);
+}
+.tbl-card-body {
+  padding: 22px 24px 18px;
+  cursor: pointer;
+}
+.tbl-card-icon {
+  width: 36px; height: 36px;
+  background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 14px;
+}
+.tbl-card-icon svg { width: 18px; height: 18px; color: #fff; }
+.tbl-card-name { font-size: 15px; font-weight: 600; color: var(--apple-text-1); margin-bottom: 4px; letter-spacing: -0.2px; }
+.tbl-card-ks { font-size: 12px; color: var(--apple-text-3); font-family: var(--apple-mono); }
+.tbl-card-actions {
+  display: flex;
+  border-top: 1px solid var(--apple-gray-2);
+}
+.tbl-action-btn {
+  flex: 1;
+  padding: 11px 8px;
+  background: transparent;
+  border: none;
+  border-right: 1px solid var(--apple-gray-2);
+  color: var(--apple-text-2);
+  font-size: 12px;
+  font-family: var(--apple-font);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+}
+.tbl-action-btn:last-child { border-right: none; }
+.tbl-action-btn:hover { background: var(--apple-gray-bg); color: var(--apple-blue); }
+.tbl-action-btn.danger:hover { background: rgba(255,59,48,0.06); color: var(--apple-red); }
+
+/* ═══════════ DATA TABLE ═══════════ */
+.data-toolbar {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 16px;
+  align-items: center;
+  background: var(--apple-white);
+  border-radius: var(--apple-radius);
+  padding: 10px 14px;
+  box-shadow: var(--apple-shadow-sm);
+  border: 1px solid rgba(0,0,0,0.04);
+}
+.data-toolbar .form-input {
+  flex: 1;
+  border: 1.5px solid var(--apple-gray-3);
+  background: var(--apple-white);
+  padding: 7px 12px;
+  font-size: 13px;
+  border-radius: var(--apple-radius-sm);
+}
+.data-toolbar .form-input:focus { border-color: var(--apple-blue); box-shadow: 0 0 0 4px rgba(0,113,227,0.12); }
+.data-toolbar .form-select {
+  width: 110px;
+  border: 1.5px solid var(--apple-gray-3);
+  padding: 7px 28px 7px 10px;
+  font-size: 12px;
+  border-radius: var(--apple-radius-sm);
+}
+.toolbar-sep { width: 1px; height: 18px; background: var(--apple-gray-3); flex-shrink: 0; }
+
+.table-container {
+  background: var(--apple-white);
+  border-radius: var(--apple-radius-lg);
+  overflow: hidden;
+  box-shadow: var(--apple-shadow-sm);
+  border: 1px solid rgba(0,0,0,0.04);
+}
+.table-scroll { overflow-x: auto; max-height: 52vh; }
+.data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.data-table thead { position: sticky; top: 0; z-index: 2; }
+.data-table th {
+  background: rgba(245,245,247,0.9);
+  backdrop-filter: blur(10px);
+  padding: 11px 16px;
+  text-align: left;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--apple-text-2);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid var(--apple-gray-2);
+  white-space: nowrap;
+}
+.data-table td {
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--apple-gray-2);
+  color: var(--apple-text-1);
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+}
+.data-table td:last-child { border-right: none; }
+.data-table tbody tr { transition: background 0.12s; }
+.data-table tbody tr:hover td { background: rgba(0,113,227,0.03); }
+.data-table td.mono { font-family: var(--apple-mono); font-size: 12px; color: var(--apple-blue); }
+
+.row-ops { display: flex; gap: 4px; opacity: 0; transition: opacity 0.15s; }
+.data-table tr:hover .row-ops { opacity: 1; }
+
+.table-footer {
+  padding: 12px 18px;
+  background: var(--apple-gray-bg);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--apple-text-2);
+  border-top: 1px solid var(--apple-gray-2);
+}
+.table-footer-right { font-family: var(--apple-mono); font-size: 11px; color: var(--apple-text-3); }
+
+/* ═══════════ CQL EDITOR ═══════════ */
+.cql-wrap {
+  background: #1c1c1e;
+  border-radius: var(--apple-radius-lg);
+  overflow: hidden;
+  margin-bottom: 16px;
+}
+.cql-toolbar {
+  background: #2c2c2e;
+  padding: 12px 18px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.cql-hint { margin-left: auto; font-size: 11px; color: #636366; font-family: var(--apple-mono); }
+
+.cql-result-wrap {
+  margin-top: 16px;
+  background: var(--apple-white);
+  border-radius: var(--apple-radius-lg);
+  overflow: hidden;
+  box-shadow: var(--apple-shadow-sm);
+  border: 1px solid rgba(0,0,0,0.04);
+}
+.cql-result-header {
+  background: var(--apple-gray-bg);
+  padding: 12px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--apple-gray-2);
+}
+.cql-result-title { font-size: 13px; font-weight: 600; color: var(--apple-text-1); }
+.cql-result-meta { display: flex; gap: 16px; color: var(--apple-text-3); font-size: 12px; }
+
+.cql-error {
+  padding: 14px 18px;
+  color: var(--apple-red);
+  font-family: var(--apple-mono);
+  font-size: 12.5px;
+  background: rgba(255,59,48,0.04);
+  border-top: 1px solid rgba(255,59,48,0.1);
+  line-height: 1.6;
+}
+
+.cql-success-msg {
+  padding: 14px 18px;
+  color: #248a3d;
+  font-family: var(--apple-mono);
+  font-size: 12.5px;
+  background: rgba(52,199,89,0.06);
+  border-top: 1px solid rgba(52,199,89,0.1);
+}
+
+.tpl-grid { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+.tpl-btn {
+  padding: 7px 14px;
+  background: var(--apple-white);
+  border: 1.5px solid var(--apple-gray-3);
+  border-radius: 20px;
+  color: var(--apple-text-1);
+  cursor: pointer;
+  font-size: 12.5px;
+  font-family: var(--apple-font);
+  font-weight: 400;
+  transition: all 0.2s;
+}
+.tpl-btn:hover { background: var(--apple-blue); color: #fff; border-color: var(--apple-blue); box-shadow: 0 4px 12px rgba(0,113,227,0.25); }
+
+/* ═══════════ COLUMN BUILDER ═══════════ */
+.col-header { display: grid; grid-template-columns: 1fr 1fr 64px 64px 32px; gap: 8px; padding: 4px 0; }
+.col-header span { font-size: 11px; font-weight: 600; color: var(--apple-text-3); text-align: center; text-transform: uppercase; letter-spacing: 0.05em; }
+.col-header span:first-child, .col-header span:nth-child(2) { text-align: left; }
+.col-row { display: grid; grid-template-columns: 1fr 1fr 64px 64px 32px; gap: 8px; align-items: center; padding: 4px 0; border-bottom: 1px solid var(--apple-gray-2); }
+.col-row:last-child { border-bottom: none; }
+.col-check { display: flex; align-items: center; justify-content: center; }
+.col-check input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; accent-color: var(--apple-blue); }
+
+.cql-preview {
+  padding: 14px 16px;
+  background: #1c1c1e;
+  border-radius: var(--apple-radius);
+  font-family: var(--apple-mono);
+  font-size: 12px;
+  color: #e5e5ea;
+  white-space: pre-wrap;
+  line-height: 1.7;
+  margin-top: 14px;
+  overflow-x: auto;
+}
+
+/* ═══════════ CONFIRM DIALOG ═══════════ */
+.confirm-body { text-align: center; padding: 8px 0 24px; }
+.confirm-icon-wrap {
+  width: 56px; height: 56px;
+  margin: 0 auto 18px;
+  background: rgba(255,59,48,0.08);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.confirm-icon-wrap svg { width: 26px; height: 26px; color: var(--apple-red); }
+.confirm-title { font-size: 18px; font-weight: 600; color: var(--apple-text-1); margin-bottom: 8px; letter-spacing: -0.2px; }
+.confirm-msg { font-size: 13px; color: var(--apple-text-2); line-height: 1.6; max-width: 340px; margin: 0 auto; }
+
+/* ═══════════ WELCOME ═══════════ */
+.welcome-hero { max-width: 540px; margin: 80px auto 0; text-align: center; }
+.welcome-logo-wrap {
+  width: 80px; height: 80px;
+  margin: 0 auto 28px;
+  background: linear-gradient(135deg, #1d1d1f, #3a3a3c);
+  border-radius: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.15);
+}
+.welcome-logo-wrap svg { width: 40px; height: 40px; color: #fff; }
+.welcome-title { font-size: 36px; font-weight: 700; color: var(--apple-text-1); margin-bottom: 12px; letter-spacing: -0.6px; }
+.welcome-sub { font-size: 15px; color: var(--apple-text-2); line-height: 1.6; margin-bottom: 28px; }
+.welcome-quick { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+.welcome-hint { font-size: 12px; color: var(--apple-text-3); margin-top: 14px; font-family: var(--apple-mono); }
+
+/* ═══════════ INSERT / EDIT FORM ═══════════ */
+.insert-fields-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+
+/* ═══════════ SCHEMA ═══════════ */
+.schema-wrap { overflow-x: auto; }
+
+/* ═══════════ INFO PAIRS ═══════════ */
+.info-pair { display: flex; align-items: center; justify-content: space-between; padding: 9px 0; border-bottom: 1px solid var(--apple-gray-2); }
+.info-pair:last-child { border-bottom: none; }
+.info-key { font-size: 12px; color: var(--apple-text-3); font-weight: 400; }
+.info-val { font-size: 13px; color: var(--apple-text-1); font-family: var(--apple-mono); }
+
+/* ═══════════ RESPONSIVE ═══════════ */
+@media (max-width: 960px) {
+  .sidebar { width: 220px; }
+  .form-row-2, .form-row-3 { grid-template-columns: 1fr; }
+  .panel-body { padding: 20px; }
+  .panel-header { padding: 20px 20px 16px; }
+  .insert-fields-grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<div id="app">
+
+<!-- ════════════════════════════
+  登录页面
+════════════════════════════ -->
+<div id="loginPage" class="page active">
+  <div class="login-hero">
+    <div class="login-logo-wrap">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <ellipse cx="12" cy="5" rx="9" ry="3"/>
+        <path d="M3 5v4c0 1.66 4 3 9 3s9-1.34 9-3V5"/>
+        <path d="M3 9v4c0 1.66 4 3 9 3s9-1.34 9-3V9"/>
+        <path d="M3 13v4c0 1.66 4 3 9 3s9-1.34 9-3v-4"/>
+      </svg>
+    </div>
+    <div class="login-hero-title">Cassandra Manager</div>
+    <div class="login-hero-sub">连接你的 Apache Cassandra 集群，可视化管理键空间、表与数据。</div>
+  </div>
+
+  <div class="login-card">
+    <div class="login-tabs">
+      <button class="login-tab active" type="button" onclick="switchLoginTab('new')">新建连接</button>
+      <button class="login-tab" type="button" onclick="switchLoginTab('saved')">已保存</button>
+    </div>
+
+    <!-- 新建连接 -->
+    <div id="tabNew" class="login-panel active">
+      <div class="form-group">
+        <label class="form-label">连接名称</label>
+        <input class="form-input" id="connName" value="本地集群" placeholder="my_cluster">
+      </div>
+      <div class="form-row form-row-2">
+        <div class="form-group">
+          <label class="form-label">主机</label>
+          <input class="form-input" id="connHost" value="127.0.0.1" placeholder="127.0.0.1">
+        </div>
+        <div class="form-group">
+          <label class="form-label">端口</label>
+          <input class="form-input" id="connPort" value="9042" placeholder="9042" type="number">
+        </div>
+      </div>
+      <div class="form-row form-row-2">
+        <div class="form-group">
+          <label class="form-label">用户名 <span style="color:var(--apple-text-3);font-weight:400">(选填)</span></label>
+          <input class="form-input" id="connUser" placeholder="无认证则留空">
+        </div>
+        <div class="form-group">
+          <label class="form-label">密码 <span style="color:var(--apple-text-3);font-weight:400">(选填)</span></label>
+          <input class="form-input" id="connPass" type="password" placeholder="无认证则留空">
+        </div>
+      </div>
+      <div style="display:flex;gap:10px">
+        <button class="btn" style="flex:1" type="button" onclick="testConn()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          测试连接
+        </button>
+        <button class="btn btn-primary" style="flex:1" type="button" onclick="connectCassandra()">
+          连接
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        </button>
+      </div>
+      <div style="margin-top:12px;text-align:center">
+        <button class="btn btn-ghost btn-sm" type="button" onclick="saveConnConfig()">
+          保存此连接
+        </button>
+      </div>
+      <div id="loginAlert" class="login-alert"></div>
+    </div>
+
+    <!-- 已保存 -->
+    <div id="tabSaved" class="login-panel">
+      <div id="savedList" class="saved-list">
+        <div class="empty-state" style="padding:32px 0">
+          <div class="empty-icon-wrap">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          </div>
+          <div class="empty-title" style="font-size:15px">暂无保存的连接</div>
+          <div class="empty-sub">先连接一个集群并保存，下次即可快速接入。</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════
+  主应用界面
+════════════════════════════ -->
+<div id="mainPage" class="page">
+  <!-- 顶栏 -->
+  <div class="topbar">
+    <div class="topbar-brand">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <ellipse cx="12" cy="5" rx="9" ry="3"/>
+        <path d="M3 5v4c0 1.66 4 3 9 3s9-1.34 9-3V5"/>
+        <path d="M3 9v4c0 1.66 4 3 9 3s9-1.34 9-3V9"/>
+        <path d="M3 13v4c0 1.66 4 3 9 3s9-1.34 9-3v-4"/>
+      </svg>
+      Cassandra Manager
+    </div>
+    <div class="topbar-sep"></div>
+    <div class="topbar-conn">
+      <div class="conn-dot"></div>
+      <span id="topbarInfo">未连接</span>
+    </div>
+    <div class="topbar-right">
+      <button class="btn btn-ghost btn-sm" type="button" onclick="openPanel('cql')">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+        CQL 编辑器
+      </button>
+      <button class="btn btn-ghost btn-sm" type="button" onclick="refreshSidebar()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9"/><path d="M3 3v5h5"/></svg>
+        刷新
+      </button>
+      <button class="btn btn-danger-ghost btn-sm" type="button" onclick="doLogout()">
+        断开
+      </button>
+    </div>
+  </div>
+
+  <!-- 主体 -->
+  <div class="main-layout">
+    <!-- 侧边栏 -->
+    <div class="sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-label">浏览器</div>
+      </div>
+      <div id="sidebarBody" class="sidebar-body">
+        <div class="loading" style="padding:12px 8px">
+          <div class="spinner"></div> 加载中...
+        </div>
+      </div>
+    </div>
+
+    <!-- 内容区 -->
+    <div class="main-content">
+
+      <!-- 欢迎页 -->
+      <div id="panelWelcome" class="panel active">
+        <div class="welcome-hero">
+          <div class="welcome-logo-wrap">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <ellipse cx="12" cy="5" rx="9" ry="3"/>
+              <path d="M3 5v4c0 1.66 4 3 9 3s9-1.34 9-3V5"/>
+              <path d="M3 9v4c0 1.66 4 3 9 3s9-1.34 9-3V9"/>
+              <path d="M3 13v4c0 1.66 4 3 9 3s9-1.34 9-3v-4"/>
+            </svg>
+          </div>
+          <div class="welcome-title">Cassandra Manager</div>
+          <div class="welcome-sub">选择一个键空间或表开始浏览，<br>或使用 CQL 编辑器执行自定义查询。</div>
+          <div class="welcome-quick">
+            <button class="btn btn-primary" type="button" onclick="openPanel('keyspaces');loadKeyspaces()">浏览键空间</button>
+            <button class="btn" type="button" onclick="openPanel('cql')">打开 CQL 编辑器</button>
+          </div>
+          <div class="welcome-hint">Cassandra 4.x · Python 3.9+</div>
+        </div>
+      </div>
+
+      <!-- 键空间 -->
+      <div id="panelKeyspaces" class="panel">
+        <div class="panel-header">
+          <div class="panel-title">键空间</div>
+          <div class="panel-subtitle">集群中的全部键空间与复制策略</div>
+          <div class="panel-actions">
+            <button class="btn btn-sm" type="button" onclick="loadKeyspaces()">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9"/><path d="M3 3v5h5"/></svg>
+              刷新
+            </button>
+            <button class="btn btn-primary btn-sm" type="button" onclick="showCreateKsModal()">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              新建键空间
+            </button>
+          </div>
+        </div>
+        <div class="panel-body">
+          <div id="ksList" class="card-grid"></div>
+        </div>
+      </div>
+
+      <!-- 表 -->
+      <div id="panelTables" class="panel">
+        <div class="panel-header">
+          <div class="panel-title" id="tblPanelTitle">表</div>
+          <div class="panel-subtitle" id="tblPanelSub"></div>
+          <div class="panel-actions">
+            <button class="btn btn-sm" type="button" onclick="loadTables()">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9"/><path d="M3 3v5h5"/></svg>
+              刷新
+            </button>
+            <button class="btn btn-primary btn-sm" type="button" onclick="showCreateTblModal()">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              新建表
+            </button>
+          </div>
+        </div>
+        <div class="panel-body">
+          <div id="tblList" class="card-grid"></div>
+        </div>
+      </div>
+
+      <!-- 数据 -->
+      <div id="panelData" class="panel">
+        <div class="panel-header">
+          <div class="panel-title" id="dataPanelTitle">数据</div>
+          <div class="panel-subtitle" id="dataPanelSub"></div>
+          <div class="panel-actions">
+            <button class="btn btn-primary btn-sm" type="button" onclick="showInsertModal()">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              插入行
+            </button>
+          </div>
+        </div>
+        <div class="panel-body">
+          <div class="data-toolbar">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--apple-text-3);flex-shrink:0"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input class="form-input" id="whereInput" placeholder="WHERE 条件（如：id = 'abc-123'）">
+            <div class="toolbar-sep"></div>
+            <select class="form-select" id="limitSel">
+              <option value="50">50 行</option>
+              <option value="100" selected>100 行</option>
+              <option value="200">200 行</option>
+              <option value="500">500 行</option>
+            </select>
+            <button class="btn btn-primary btn-sm" type="button" onclick="loadData()">查询</button>
+          </div>
+          <div id="dataContainer"></div>
+        </div>
+      </div>
+
+      <!-- CQL 编辑器 -->
+      <div id="panelCql" class="panel">
+        <div class="panel-header">
+          <div class="panel-title">CQL 编辑器</div>
+          <div class="panel-subtitle">执行自定义 CQL 语句，Ctrl+Enter 运行</div>
+        </div>
+        <div class="panel-body">
+          <div id="tplGrid" class="tpl-grid"></div>
+          <div class="cql-wrap">
+            <div class="cql-toolbar">
+              <button class="btn btn-primary btn-sm" type="button" onclick="execCQL()">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                运行
+              </button>
+              <button class="btn btn-sm" type="button" onclick="clearCQL()" style="color:#e5e5ea;background:transparent;border-color:rgba(255,255,255,0.1)">清空</button>
+              <span class="cql-hint">Ctrl + Enter 运行</span>
+            </div>
+            <textarea id="cqlEditor" class="form-textarea" placeholder="SELECT * FROM system.local;&#10;&#10;-- 或输入你的 CQL 语句"></textarea>
+          </div>
+          <div id="cqlResultWrap" style="display:none" class="cql-result-wrap">
+            <div class="cql-result-header">
+              <span class="cql-result-title">结果</span>
+              <div class="cql-result-meta">
+                <span id="cqlRows"></span>
+                <span id="cqlTime"></span>
+              </div>
+            </div>
+            <div id="cqlResultBody"></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+</div><!-- #app -->
+
+<!-- Toast 通知 -->
+<div id="toasts" class="toast-container"></div>
+
+<!-- ════════════ 模态框 ════════════ -->
+
+<!-- 新建键空间 -->
+<div id="mCreateKs" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title">新建键空间</div>
+        <div class="modal-subtitle">在集群中创建一个新的键空间</div>
+      </div>
+      <button class="modal-close" type="button" onclick="closeModal('mCreateKs')">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">键空间名称 <span style="color:var(--apple-red)">*</span></label>
+        <input class="form-input" id="ksName" placeholder="my_keyspace" oninput="updateKsCqlPrev()">
+      </div>
+      <div class="form-group">
+        <label class="form-label">复制策略</label>
+        <select class="form-select" id="ksStrategy" onchange="toggleDcField()">
+          <option value="SimpleStrategy">SimpleStrategy（开发 / 单节点）</option>
+          <option value="NetworkTopologyStrategy">NetworkTopologyStrategy（生产环境）</option>
+        </select>
+      </div>
+      <div class="form-row form-row-2">
+        <div class="form-group">
+          <label class="form-label">复制因子</label>
+          <input class="form-input" id="ksFactor" type="number" value="1" min="1" max="9" oninput="updateKsCqlPrev()">
+        </div>
+        <div class="form-group" id="ksDcGroup" style="display:none">
+          <label class="form-label">数据中心名称</label>
+          <input class="form-input" id="ksDc" value="datacenter1" placeholder="datacenter1" oninput="updateKsCqlPrev()">
+        </div>
+      </div>
+      <div id="ksCqlPrev" class="cql-preview" style="display:none"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" type="button" onclick="closeModal('mCreateKs')">取消</button>
+      <button class="btn btn-primary" type="button" onclick="createKs()">创建键空间</button>
+    </div>
+  </div>
+</div>
+
+<!-- 新建表 -->
+<div id="mCreateTbl" class="modal-overlay">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title" id="createTblTitle">新建表</div>
+        <div class="modal-subtitle">定义表的列、主键和聚簇键</div>
+      </div>
+      <button class="modal-close" type="button" onclick="closeModal('mCreateTbl')">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">表名 <span style="color:var(--apple-red)">*</span></label>
+        <input class="form-input" id="tblName" placeholder="my_table" oninput="updateTblCqlPrev()">
+      </div>
+      <div class="form-group">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+          <label class="form-label" style="margin-bottom:0">列定义</label>
+          <button class="btn btn-ghost btn-xs" type="button" onclick="addColRow()">+ 添加列</button>
+        </div>
+        <div class="col-header">
+          <span>列名</span><span>类型</span><span>分区键</span><span>聚簇键</span><span></span>
+        </div>
+        <div id="colsContainer"></div>
+      </div>
+      <div id="tblCqlPrev" class="cql-preview" style="display:none"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" type="button" onclick="closeModal('mCreateTbl')">取消</button>
+      <button class="btn btn-primary" type="button" onclick="createTbl()">创建表</button>
+    </div>
+  </div>
+</div>
+
+<!-- 插入 / 编辑 -->
+<div id="mInsert" class="modal-overlay">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title" id="insertTitle">插入行</div>
+        <div class="modal-subtitle" id="insertSub"></div>
+      </div>
+      <button class="modal-close" type="button" onclick="closeModal('mInsert')">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div id="insertFields" class="insert-fields-grid"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" type="button" onclick="closeModal('mInsert')">取消</button>
+      <button class="btn btn-primary" id="insertOkBtn" type="button" onclick="submitInsert()">插入</button>
+    </div>
+  </div>
+</div>
+
+<!-- 表结构 -->
+<div id="mSchema" class="modal-overlay">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title" id="schemaTitle">表结构</div>
+        <div class="modal-subtitle">列定义与主键详情</div>
+      </div>
+      <button class="modal-close" type="button" onclick="closeModal('mSchema')">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div id="schemaContent" class="schema-wrap"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" type="button" onclick="closeModal('mSchema')">关闭</button>
+    </div>
+  </div>
+</div>
+
+<!-- 确认删除 -->
+<div id="mConfirm" class="modal-overlay">
+  <div class="modal" style="width:420px">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title" id="confirmTitleText">确认操作</div>
+      </div>
+      <button class="modal-close" type="button" onclick="closeModal('mConfirm')">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="confirm-body">
+        <div class="confirm-icon-wrap" id="confirmIconWrap">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        </div>
+        <div class="confirm-title" id="confirmTitleText2">确定要删除吗？</div>
+        <div class="confirm-msg" id="confirmMsg"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" type="button" onclick="closeModal('mConfirm')">取消</button>
+      <button class="btn btn-primary" id="confirmOkBtn" type="button" onclick="doConfirm()" style="background:var(--apple-red)">确认删除</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════ JavaScript ════════════ -->
+<script>
+const API = 'http://127.0.0.1:5000/api';
+
+const state = {
+  ks: null,
+  tbl: null,
+  tblCols: [],
+  editRow: null,
+  confirmCb: null,
+};
+
+// ─── API ──────────────────────────────────────────────────
+async function api(method, path, body = null) {
+  const opts = { method, headers: { 'Content-Type': 'application/json' } };
+  if (body) opts.body = JSON.stringify(body);
+  const r = await fetch(API + path, opts);
+  return r.json();
+}
+
+// ─── XSS ──────────────────────────────────────────────────
+function esc(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+function escAttr(s) { return esc(s).replace(/"/g,'&quot;'); }
+
+// ─── Toast ────────────────────────────────────────────────
+function toast(msg, type = 'info', ms = 3200) {
+  const icons = { success:'✓', error:'✕', info:'ℹ', warning:'⚠' };
+  const el = document.createElement('div');
+  el.className = `toast toast-${type}`;
+  el.innerHTML = `<div class="toast-icon">${icons[type]||'ℹ'}</div><span>${esc(msg)}</span>`;
+  document.getElementById('toasts').appendChild(el);
+  setTimeout(() => { el.style.opacity='0'; el.style.transform='translateX(30px) scale(0.95)'; setTimeout(()=>el.remove(),250); }, ms);
+}
+
+// ─── Modal ────────────────────────────────────────────────
+function openModal(id) { document.getElementById(id).classList.add('show'); }
+function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+
+// ─── Panel ────────────────────────────────────────────────
+function openPanel(name) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  const map = { welcome:'panelWelcome', keyspaces:'panelKeyspaces', tables:'panelTables', data:'panelData', cql:'panelCql' };
+  const el = document.getElementById(map[name] || name);
+  if (el) el.classList.add('active');
+  if (name === 'cql') loadCqlTpls();
+}
+
+// ══════════════════════════════════════
+//  登录
+// ══════════════════════════════════════
+function switchLoginTab(tab) {
+  document.querySelectorAll('.login-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.login-panel').forEach(p => p.classList.remove('active'));
+  const tabs = document.querySelectorAll('.login-tab');
+  if (tab === 'new') tabs[0].classList.add('active');
+  else tabs[1].classList.add('active');
+  document.getElementById(tab === 'new' ? 'tabNew' : 'tabSaved').classList.add('active');
+  if (tab === 'saved') loadSavedConns();
+}
+
+function showLoginAlert(msg, type) {
+  const el = document.getElementById('loginAlert');
+  el.textContent = msg;
+  el.className = `login-alert show ${type}`;
+  setTimeout(() => el.classList.remove('show'), 6000);
+}
+
+function getForm() {
+  return {
+    name: document.getElementById('connName').value || '本地集群',
+    host: document.getElementById('connHost').value || '127.0.0.1',
+    port: parseInt(document.getElementById('connPort').value) || 9042,
+    username: document.getElementById('connUser').value,
+    password: document.getElementById('connPass').value,
+  };
+}
+
+async function testConn() {
+  const btn = event.target.closest('.btn');
+  const orig = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner" style="width:12px;height:12px"></div> 测试中...';
+  try {
+    const r = await api('POST', '/connection/test', getForm());
+    showLoginAlert(r.success ? (r.message || '连接成功') : (r.error || '连接失败'), r.success ? 'success' : 'error');
+  } catch { showLoginAlert('无法连接后端，请确保 app.py 已运行。', 'error'); }
+  btn.disabled = false;
+  btn.innerHTML = orig;
+}
+
+async function connectCassandra(saved = null) {
+  const form = saved || getForm();
+  try {
+    const r = await api('POST', '/connection/connect', form);
+    if (r.success) {
+      document.getElementById('topbarInfo').textContent = `${form.name} · ${form.host}:${form.port}`;
+      document.getElementById('loginPage').classList.remove('active');
+      document.getElementById('mainPage').classList.add('active');
+      await loadSidebarKs();
+      toast(`已连接至 ${form.host}:${form.port}`, 'success');
+    } else {
+      showLoginAlert(r.error || '连接失败', 'error');
+    }
+  } catch { showLoginAlert('后端服务不可用，请运行：python app.py', 'error'); }
+}
+
+async function saveConnConfig() {
+  try {
+    const r = await api('POST', '/connections/save', getForm());
+    toast(r.success ? '连接已保存' : (r.error || '保存失败'), r.success ? 'success' : 'error');
+  } catch { toast('保存失败', 'error'); }
+}
+
+async function loadSavedConns() {
+  const c = document.getElementById('savedList');
+  try {
+    const r = await api('GET', '/connections/saved');
+    if (!r.success || !r.data.length) {
+      c.innerHTML = `
+        <div class="empty-state" style="padding:32px 0">
+          <div class="empty-icon-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+          <div class="empty-title" style="font-size:15px">暂无保存的连接</div>
+          <div class="empty-sub">先连接一个集群并保存，下次即可快速接入。</div>
+        </div>`;
+      return;
+    }
+    c.innerHTML = r.data.map(item => {
+      const j = escAttr(JSON.stringify(item));
+      return `<div class="saved-item" onclick='connectCassandra(${j})'>
+        <div class="saved-item-info">
+          <div class="saved-item-name">${esc(item.name)}</div>
+          <div class="saved-item-host">${esc(item.host)}:${item.port}${item.username ? ' · '+esc(item.username) : ''}</div>
+        </div>
+        <div class="saved-item-btns" onclick="event.stopPropagation()">
+          <button class="btn btn-sm" onclick='connectCassandra(${j})'>连接</button>
+          <button class="btn btn-danger-ghost btn-sm" onclick="delSavedConn('${escAttr(item.name)}')">删除</button>
+        </div>
+      </div>`;
+    }).join('');
+  } catch { c.innerHTML = '<div style="color:var(--apple-red);padding:10px;font-size:13px">加载失败</div>'; }
+}
+
+async function delSavedConn(name) {
+  if (!confirm(`删除连接 "${name}"？`)) return;
+  await api('DELETE', `/connections/delete/${encodeURIComponent(name)}`);
+  loadSavedConns();
+  toast('已删除', 'info');
+}
+
+async function doLogout() {
+  await api('POST', '/connection/disconnect');
+  document.getElementById('mainPage').classList.remove('active');
+  document.getElementById('loginPage').classList.add('active');
+  state.ks = null; state.tbl = null;
+  document.getElementById('sidebarBody').innerHTML = '';
+  toast('已断开连接', 'info');
+}
+
+// ══════════════════════════════════════
+//  侧边栏
+// ══════════════════════════════════════
+async function loadSidebarKs() {
+  const c = document.getElementById('sidebarBody');
+  c.innerHTML = `<div class="loading" style="padding:12px 8px"><div class="spinner"></div> 加载中...</div>`;
+  try {
+    const r = await api('GET', '/keyspaces');
+    if (!r.success) { c.innerHTML = `<div style="color:var(--apple-red);padding:12px 8px;font-size:12px">${esc(r.error)}</div>`; return; }
+    c.innerHTML = `
+      <div class="sidebar-item" onclick="openPanel('keyspaces');loadKeyspaces()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v4c0 1.66 4 3 9 3s9-1.34 9-3V5"/><path d="M3 9v4c0 1.66 4 3 9 3s9-1.34 9-3V9"/></svg>
+        所有键空间
+      </div>
+      <div class="sidebar-divider"></div>
+    ` + r.data.map(ks => buildKsNode(ks)).join('');
+  } catch { c.innerHTML = `<div style="color:var(--apple-red);padding:12px 8px;font-size:12px">加载失败</div>`; }
+}
+
+function buildKsNode(ks) {
+  return `<div class="sidebar-group" id="ksGroup_${escAttr(ks.name)}">
+    <div class="sidebar-group-header" onclick="toggleKs('${escAttr(ks.name)}')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+      <span style="flex:1;overflow:hidden;text-overflow:ellipsis">${esc(ks.name)}</span>
+    </div>
+    <div class="sidebar-group-body" id="ksGroupBody_${escAttr(ks.name)}"></div>
+  </div>`;
+}
+
+async function toggleKs(name) {
+  const g = document.getElementById(`ksGroup_${name}`);
+  const b = document.getElementById(`ksGroupBody_${name}`);
+  const wasOpen = g.classList.contains('open');
+  g.classList.toggle('open');
+  if (!wasOpen) {
+    b.innerHTML = `<div style="padding:6px 8px;font-size:12px;color:var(--apple-text-3)">加载中...</div>`;
+    state.ks = name;
+    const r = await api('GET', `/keyspaces/${encodeURIComponent(name)}/tables`);
+    if (!r.success) { b.innerHTML = `<div style="padding:6px 8px;font-size:12px;color:var(--apple-red)">加载出错</div>`; return; }
+    if (!r.data.length) { b.innerHTML = `<div style="padding:6px 8px;font-size:12px;color:var(--apple-text-3)">无表</div>`; return; }
+    b.innerHTML = `
+      <div class="sidebar-table-item" onclick="state.ks='${escAttr(name)}';openPanel('tables');loadTables()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+        浏览所有表
+      </div>
+    ` + r.data.map(t => `
+      <div class="sidebar-table-item" id="tblItem_${escAttr(name)}_${escAttr(t)}"
+        onclick="selTbl('${escAttr(name)}','${escAttr(t)}')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+        <span>${esc(t)}</span>
+      </div>
+    `).join('');
+  }
+}
+
+function selTbl(ks, tbl) {
+  state.ks = ks; state.tbl = tbl;
+  document.querySelectorAll('.sidebar-table-item.active').forEach(el => el.classList.remove('active'));
+  const el = document.getElementById(`tblItem_${ks}_${tbl}`);
+  if (el) el.classList.add('active');
+  openPanel('data');
+  document.getElementById('dataPanelTitle').textContent = tbl;
+  document.getElementById('dataPanelSub').textContent = `${ks} · 表数据`;
+  loadData();
+}
+
+function refreshSidebar() { loadSidebarKs(); }
+
+// ══════════════════════════════════════
+//  键空间
+// ══════════════════════════════════════
+async function loadKeyspaces() {
+  const c = document.getElementById('ksList');
+  c.innerHTML = `<div class="loading" style="padding:40px"><div class="spinner"></div> 加载中...</div>`;
+  const r = await api('GET', '/keyspaces');
+  if (!r.success) { toast(r.error, 'error'); return; }
+  if (!r.data.length) {
+    c.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v4c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg></div>
+        <div class="empty-title">暂无键空间</div>
+        <div class="empty-sub">创建你的第一个键空间以开始使用</div>
+        <button class="btn btn-primary" onclick="showCreateKsModal()">新建键空间</button>
+      </div>`;
+    return;
+  }
+  c.innerHTML = r.data.map(ks => `
+    <div class="ks-card" onclick="state.ks='${escAttr(ks.name)}';openPanel('tables');loadTables()">
+      <div class="ks-card-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v4c0 1.66 4 3 9 3s9-1.34 9-3V5"/><path d="M3 9v4c0 1.66 4 3 9 3s9-1.34 9-3V9"/><path d="M3 13v4c0 1.66 4 3 9 3s9-1.34 9-3v-4"/></svg>
+      </div>
+      <div class="ks-card-name">${esc(ks.name)}</div>
+      <div class="ks-card-meta">
+        <div class="ks-meta-row"><span class="ks-meta-label">策略</span><span class="ks-meta-val">${esc(ks.strategy.split('.').pop())}</span></div>
+        <div class="ks-meta-row"><span class="ks-meta-label">复制因子</span><span class="ks-meta-val">${esc(String(ks.replication_factor))}</span></div>
+        <div class="ks-meta-row"><span class="ks-meta-label">标签</span><span><span class="badge badge-blue">${esc(ks.strategy.replace('org.apache.cassandra.locator.',''))}</span></span></div>
+      </div>
+      <div class="ks-card-actions" onclick="event.stopPropagation()">
+        <button class="btn btn-sm" type="button" onclick="state.ks='${escAttr(ks.name)}';openPanel('tables');loadTables()">浏览表</button>
+        <button class="btn btn-danger-ghost btn-sm" type="button" onclick="confirmDropKs('${escAttr(ks.name)}')">删除</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function showCreateKsModal() {
+  document.getElementById('ksName').value = '';
+  document.getElementById('ksStrategy').value = 'SimpleStrategy';
+  document.getElementById('ksFactor').value = '1';
+  document.getElementById('ksDc').value = 'datacenter1';
+  document.getElementById('ksDcGroup').style.display = 'none';
+  document.getElementById('ksCqlPrev').style.display = 'none';
+  openModal('mCreateKs');
+}
+
+function toggleDcField() {
+  const s = document.getElementById('ksStrategy').value;
+  document.getElementById('ksDcGroup').style.display = s === 'NetworkTopologyStrategy' ? '' : 'none';
+  updateKsCqlPrev();
+}
+
+function updateKsCqlPrev() {
+  const n = document.getElementById('ksName').value || 'my_keyspace';
+  const s = document.getElementById('ksStrategy').value;
+  const f = document.getElementById('ksFactor').value || '1';
+  const d = document.getElementById('ksDc').value || 'datacenter1';
+  const prev = document.getElementById('ksCqlPrev');
+  prev.style.display = 'block';
+  if (s === 'SimpleStrategy') {
+    prev.textContent = `CREATE KEYSPACE IF NOT EXISTS ${n}\n  WITH replication = {'class': 'SimpleStrategy',\n    'replication_factor': ${f}};`;
+  } else {
+    prev.textContent = `CREATE KEYSPACE IF NOT EXISTS ${n}\n  WITH replication = {'class': 'NetworkTopologyStrategy',\n    '${d}': ${f}};`;
+  }
+}
+
+async function createKs() {
+  const n = document.getElementById('ksName').value.trim();
+  if (!n) { toast('请输入键空间名称', 'warning'); return; }
+  const r = await api('POST', '/keyspaces', {
+    name: n,
+    strategy: document.getElementById('ksStrategy').value,
+    replication_factor: parseInt(document.getElementById('ksFactor').value) || 1,
+    datacenter: document.getElementById('ksDc').value,
+  });
+  if (r.success) {
+    toast(`键空间 "${n}" 创建成功`, 'success');
+    closeModal('mCreateKs');
+    loadKeyspaces();
+    loadSidebarKs();
+  } else toast(r.error, 'error');
+}
+
+function confirmDropKs(name) {
+  state.confirmCb = async () => {
+    const r = await api('DELETE', `/keyspaces/${encodeURIComponent(name)}`);
+    if (r.success) { toast(`"${name}" 已删除`, 'success'); loadKeyspaces(); loadSidebarKs(); }
+    else toast(r.error, 'error');
+  };
+  document.getElementById('confirmTitleText').textContent = '删除键空间';
+  document.getElementById('confirmTitleText2').textContent = '删除键空间';
+  document.getElementById('confirmMsg').innerHTML = `确定要删除键空间 <strong>${esc(name)}</strong> 吗？<br><span style="color:var(--apple-red);font-size:12px;margin-top:4px;display:block">此操作将永久删除其中的所有表和数据。</span>`;
+  document.getElementById('confirmOkBtn').textContent = '删除键空间';
+  openModal('mConfirm');
+}
+
+// ══════════════════════════════════════
+//  表
+// ══════════════════════════════════════
+async function loadTables() {
+  if (!state.ks) { toast('请先选择一个键空间', 'warning'); return; }
+  document.getElementById('tblPanelTitle').textContent = state.ks;
+  document.getElementById('tblPanelSub').textContent = `${state.ks} · 全部表`;
+  const c = document.getElementById('tblList');
+  c.innerHTML = `<div class="loading" style="padding:40px"><div class="spinner"></div> 加载中...</div>`;
+  const r = await api('GET', `/keyspaces/${encodeURIComponent(state.ks)}/tables`);
+  if (!r.success) { toast(r.error, 'error'); return; }
+  if (!r.data.length) {
+    c.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg></div>
+        <div class="empty-title">暂无表</div>
+        <div class="empty-sub">在 "${esc(state.ks)}" 中创建第一个表</div>
+        <button class="btn btn-primary" onclick="showCreateTblModal()">新建表</button>
+      </div>`;
+    return;
+  }
+  c.innerHTML = r.data.map(t => `
+    <div class="tbl-card">
+      <div class="tbl-card-body" onclick="selTbl('${escAttr(state.ks)}','${escAttr(t)}')">
+        <div class="tbl-card-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+        </div>
+        <div class="tbl-card-name">${esc(t)}</div>
+        <div class="tbl-card-ks">${esc(state.ks)}.${esc(t)}</div>
+      </div>
+      <div class="tbl-card-actions">
+        <button class="tbl-action-btn" type="button" onclick="event.stopPropagation();viewSchema('${escAttr(state.ks)}','${escAttr(t)}')">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          结构
+        </button>
+        <button class="tbl-action-btn" type="button" onclick="event.stopPropagation();selTbl('${escAttr(state.ks)}','${escAttr(t)}')">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v4c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+          数据
+        </button>
+        <button class="tbl-action-btn danger" type="button" onclick="event.stopPropagation();confirmDropTbl('${escAttr(state.ks)}','${escAttr(t)}')">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+          删除
+        </button>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function viewSchema(ks, tbl) {
+  const r = await api('GET', `/keyspaces/${encodeURIComponent(ks)}/tables/${encodeURIComponent(tbl)}/schema`);
+  if (!r.success) { toast(r.error, 'error'); return; }
+  document.getElementById('schemaTitle').textContent = `${ks}.${tbl}`;
+  document.getElementById('schemaContent').innerHTML = `
+    <div class="table-container">
+      <div class="table-scroll">
+        <table class="data-table">
+          <thead><tr><th>列名</th><th>类型</th><th>角色</th></tr></thead>
+          <tbody>
+            ${r.data.columns.map(c => `<tr>
+              <td class="mono">${esc(c.name)}</td>
+              <td><span class="badge badge-blue">${esc(c.type)}</span></td>
+              <td>${kindBadge(c.kind)}</td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>`;
+  openModal('mSchema');
+}
+
+function kindBadge(k) {
+  const m = {
+    partition_key: '<span class="badge badge-orange">分区键</span>',
+    clustering: '<span class="badge badge-purple">聚簇键</span>',
+    regular: '<span class="badge badge-gray">普通列</span>',
+    static: '<span class="badge badge-green">静态列</span>',
+  };
+  return m[k] || esc(k);
+}
+
+function showCreateTblModal() {
+  if (!state.ks) { toast('请先选择一个键空间', 'warning'); return; }
+  document.getElementById('createTblTitle').textContent = `在 "${state.ks}" 中新建表`;
+  document.getElementById('tblName').value = '';
+  document.getElementById('colsContainer').innerHTML = '';
+  document.getElementById('tblCqlPrev').style.display = 'none';
+  _ci = 0; addColRow(); updateTblCqlPrev();
+  openModal('mCreateTbl');
+}
+
+let _ci = 0;
+function addColRow() {
+  const idx = _ci++;
+  const types = ['text','uuid','int','bigint','boolean','timestamp','float','double','blob','list<text>','set<text>','map<text,text>'];
+  const row = document.createElement('div');
+  row.className = 'col-row'; row.id = `cr_${idx}`;
+  row.innerHTML = `
+    <input class="form-input" style="font-size:13px;padding:7px 10px" placeholder="column_name" id="cn_${idx}" oninput="updateTblCqlPrev()">
+    <select class="form-select" style="font-size:13px;padding:7px 28px 7px 10px" id="ct_${idx}" onchange="updateTblCqlPrev()">
+      ${types.map(t=>`<option>${t}</option>`).join('')}
+    </select>
+    <div class="col-check"><input type="checkbox" id="cpk_${idx}" onchange="updateTblCqlPrev()" title="分区键"></div>
+    <div class="col-check"><input type="checkbox" id="cck_${idx}" onchange="updateTblCqlPrev()" title="聚簇键"></div>
+    <button class="btn btn-icon btn-xs" type="button" onclick="document.getElementById('cr_${idx}').remove();updateTblCqlPrev()" style="color:var(--apple-red)">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>`;
+  document.getElementById('colsContainer').appendChild(row);
+}
+
+function getColDefs() {
+  return [...document.querySelectorAll('#colsContainer .col-row')].map(r => {
+    const i = r.id.replace('cr_','');
+    const n = document.getElementById(`cn_${i}`)?.value.trim();
+    if (!n) return null;
+    return { name: n, type: document.getElementById(`ct_${i}`)?.value, is_partition_key: document.getElementById(`cpk_${i}`)?.checked, is_clustering_key: document.getElementById(`cck_${i}`)?.checked };
+  }).filter(Boolean);
+}
+
+function updateTblCqlPrev() {
+  const tbl = document.getElementById('tblName').value || 'my_table';
+  const ks = state.ks || 'my_keyspace';
+  const cols = getColDefs();
+  const prev = document.getElementById('tblCqlPrev');
+  if (!cols.length) { prev.style.display='none'; return; }
+  const pk = cols.filter(c=>c.is_partition_key).map(c=>c.name);
+  const ck = cols.filter(c=>c.is_clustering_key).map(c=>c.name);
+  const defs = cols.map(c=>`  ${c.name} ${c.type}`).join(',\n');
+  let pkStr = pk.length > 1 ? `(${pk.join(', ')})` : (pk[0]||'id');
+  if (ck.length) pkStr = `${pkStr}, ${ck.join(', ')}`;
+  prev.style.display = 'block';
+  prev.textContent = `CREATE TABLE IF NOT EXISTS ${ks}.${tbl} (\n${defs},\n  PRIMARY KEY (${pkStr})\n);`;
+}
+
+async function createTbl() {
+  const n = document.getElementById('tblName').value.trim();
+  const cols = getColDefs();
+  if (!n || !cols.length) { toast('请填写表名并至少添加一列', 'warning'); return; }
+  const r = await api('POST', `/keyspaces/${encodeURIComponent(state.ks)}/tables`, { table_name: n, columns: cols });
+  if (r.success) {
+    toast(`表 "${n}" 创建成功`, 'success');
+    closeModal('mCreateTbl');
+    loadTables(); loadSidebarKs();
+  } else toast(r.error, 'error');
+}
+
+function confirmDropTbl(ks, tbl) {
+  state.confirmCb = async () => {
+    const r = await api('DELETE', `/keyspaces/${encodeURIComponent(ks)}/tables/${encodeURIComponent(tbl)}`);
+    if (r.success) { toast(`"${tbl}" 已删除`, 'success'); loadTables(); loadSidebarKs(); }
+    else toast(r.error, 'error');
+  };
+  document.getElementById('confirmTitleText').textContent = '删除表';
+  document.getElementById('confirmTitleText2').textContent = '删除表';
+  document.getElementById('confirmMsg').innerHTML = `确定要删除表 <strong>${esc(ks)}.${esc(tbl)}</strong> 吗？<br><span style="color:var(--apple-red);font-size:12px;margin-top:4px;display:block">所有行数据将被永久删除。</span>`;
+  document.getElementById('confirmOkBtn').textContent = '删除表';
+  openModal('mConfirm');
+}
+
+// ══════════════════════════════════════
+//  数据
+// ══════════════════════════════════════
+async function loadData() {
+  if (!state.ks || !state.tbl) return;
+  const c = document.getElementById('dataContainer');
+  c.innerHTML = `<div class="loading" style="padding:40px"><div class="spinner"></div> 正在获取数据...</div>`;
+  const where = document.getElementById('whereInput').value.trim();
+  const limit = document.getElementById('limitSel').value;
+  const sr = await api('GET', `/keyspaces/${encodeURIComponent(state.ks)}/tables/${encodeURIComponent(state.tbl)}/schema`);
+  if (sr.success) state.tblCols = sr.data.columns;
+  let path = `/keyspaces/${encodeURIComponent(state.ks)}/tables/${encodeURIComponent(state.tbl)}/data?limit=${limit}`;
+  if (where) path += `&where=${encodeURIComponent(where)}`;
+  const r = await api('GET', path);
+  if (!r.success) { c.innerHTML = `<div style="color:var(--apple-red);padding:20px;font-size:13px;background:rgba(255,59,48,0.04);border-radius:var(--apple-radius);border:1px solid rgba(255,59,48,0.1)">${esc(r.error)}</div>`; return; }
+  const { rows, count, elapsed_ms } = r.data;
+  if (!rows.length) {
+    c.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div>
+        <div class="empty-title">暂无数据</div>
+        <div class="empty-sub">尝试调整筛选条件或插入一些数据</div>
+        <button class="btn btn-primary" onclick="showInsertModal()">插入行</button>
+      </div>`;
+    return;
+  }
+  const cols = Object.keys(rows[0]);
+  c.innerHTML = `
+    <div class="table-container">
+      <div class="table-scroll">
+        <table class="data-table">
+          <thead><tr>
+            ${cols.map(col => `<th>${esc(col)}</th>`).join('')}
+            <th style="width:72px"></th>
+          </tr></thead>
+          <tbody>
+            ${rows.map(row => `<tr>
+              ${cols.map(col => {
+                const v = row[col] ?? '';
+                const disp = String(v).length > 55 ? String(v).slice(0,55)+'…' : String(v);
+                return `<td title="${esc(String(v))}">${esc(disp)}</td>`;
+              }).join('')}
+              <td>
+                <div class="row-ops">
+                  <button class="btn btn-icon btn-xs" title="编辑" onclick='showEditModal(${escAttr(JSON.stringify(row))})' style="color:var(--apple-blue)">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                  </button>
+                  <button class="btn btn-icon btn-xs" title="删除" onclick='confirmDelRow(${escAttr(JSON.stringify(row))})' style="color:var(--apple-red)">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                  </button>
+                </div>
+              </td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+      <div class="table-footer">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span>${count} 行</span>
+          <span style="color:var(--apple-gray-3)">·</span>
+          <span>${elapsed_ms} ms</span>
+        </div>
+        <div class="table-footer-right">${esc(state.ks)}.${esc(state.tbl)}</div>
+      </div>
+    </div>`;
+}
+
+function buildInsertForm(cols, fill={}) {
+  return cols.map(col => `
+    <div class="form-group">
+      <label class="form-label" style="display:flex;align-items:center;gap:8px">
+        ${esc(col.name)}
+        <span style="font-family:var(--apple-mono);font-size:10px;color:var(--apple-text-3);font-weight:400">${esc(col.type)}</span>
+        ${col.kind==='partition_key'?'<span class="badge badge-orange">主键</span>':''}
+        ${col.kind==='clustering'?'<span class="badge badge-purple">聚簇</span>':''}
+      </label>
+      <input class="form-input" id="f_${escAttr(col.name)}" value="${esc(fill[col.name]??'')}" placeholder="${esc(getPlh(col.type))}">
+    </div>
+  `).join('');
+}
+
+function getPlh(t) {
+  return ({uuid:'uuid() 或指定 UUID',timestamp:'2024-01-01 00:00:00',boolean:'true / false',int:'整数 12',bigint:'大整数',float:'浮点数 0.0',text:'文本内容'})[t] || t;
+}
+
+function showInsertModal() {
+  if (!state.tblCols.length) { toast('请先加载表数据', 'warning'); return; }
+  state.editRow = null;
+  document.getElementById('insertTitle').textContent = '插入行';
+  document.getElementById('insertSub').textContent = `${state.ks}.${state.tbl}`;
+  document.getElementById('insertOkBtn').textContent = '插入';
+  document.getElementById('insertOkBtn').onclick = submitInsert;
+  document.getElementById('insertFields').innerHTML = buildInsertForm(state.tblCols);
+  openModal('mInsert');
+}
+
+function showEditModal(row) {
+  state.editRow = row;
+  document.getElementById('insertTitle').textContent = '编辑行';
+  document.getElementById('insertSub').textContent = `${state.ks}.${state.tbl}`;
+  document.getElementById('insertOkBtn').textContent = '更新';
+  document.getElementById('insertOkBtn').onclick = submitUpdate;
+  document.getElementById('insertFields').innerHTML = buildInsertForm(state.tblCols, row);
+  openModal('mInsert');
+}
+
+function parseVal(val, type) {
+  const t = (type || 'text').toLowerCase();
+  if (val === '' || val === null || val === undefined) return null;
+  if (['int','smallint','tinyint','varint'].includes(t)) {
+    const n = parseInt(val, 10); return isNaN(n) ? val : n;
+  }
+  if (['bigint','counter'].includes(t)) return val;
+  if (['float','double','decimal'].includes(t)) {
+    const n = parseFloat(val); return isNaN(n) ? val : n;
+  }
+  if (t === 'boolean') { const v = val.toLowerCase().trim(); return v === 'true' || v === '1' || v === 'yes'; }
+  if (['timestamp','date','time','duration'].includes(t)) return val;
+  return val;
+}
+
+async function submitInsert() {
+  const row = {};
+  state.tblCols.forEach(c => {
+    const el = document.getElementById(`f_${escAttr(c.name)}`);
+    if (!el) return;
+    const raw = el.value.trim();
+    if (raw !== '') { const v = parseVal(raw, c.type); if (v !== null) row[c.name] = v; }
+  });
+  const r = await api('POST', `/keyspaces/${encodeURIComponent(state.ks)}/tables/${encodeURIComponent(state.tbl)}/data`, { row });
+  if (r.success) { toast('行插入成功', 'success'); closeModal('mInsert'); loadData(); }
+  else toast(r.error, 'error');
+}
+
+async function submitUpdate() {
+  const upd={}, whr={}, pk=['partition_key','clustering'];
+  state.tblCols.forEach(c => {
+    const el = document.getElementById(`f_${escAttr(c.name)}`);
+    if (!el) return;
+    const raw = el.value.trim();
+    const v = raw !== '' ? parseVal(raw, c.type) : null;
+    if (pk.includes(c.kind)) { if (v !== null) whr[c.name]=v; }
+    else { if (v !== null) upd[c.name]=v; }
+  });
+  if (!Object.keys(upd).length) { toast('没有可更新的字段', 'warning'); return; }
+  if (!Object.keys(whr).length) { toast('需要主键条件', 'warning'); return; }
+  const r = await api('PUT', `/keyspaces/${encodeURIComponent(state.ks)}/tables/${encodeURIComponent(state.tbl)}/data`, { updates:upd, where:whr });
+  if (r.success) { toast('行更新成功', 'success'); closeModal('mInsert'); loadData(); }
+  else toast(r.error, 'error');
+}
+
+function confirmDelRow(row) {
+  const whr={}, pk=['partition_key','clustering'];
+  state.tblCols.forEach(c => { if (pk.includes(c.kind) && row[c.name]!==undefined) whr[c.name]=row[c.name]; });
+  if (!Object.keys(whr).length) Object.assign(whr, row);
+  state.confirmCb = async () => {
+    const r = await api('DELETE', `/keyspaces/${encodeURIComponent(state.ks)}/tables/${encodeURIComponent(state.tbl)}/data`, { where:whr });
+    if (r.success) { toast('行已删除', 'success'); loadData(); }
+    else toast(r.error, 'error');
+  };
+  document.getElementById('confirmTitleText').textContent = '删除行';
+  document.getElementById('confirmTitleText2').textContent = '删除行';
+  document.getElementById('confirmMsg').textContent = '此行将被永久删除。';
+  document.getElementById('confirmOkBtn').textContent = '删除行';
+  openModal('mConfirm');
+}
+
+// ══════════════════════════════════════
+//  CQL 编辑器
+// ══════════════════════════════════════
+async function loadCqlTpls() {
+  const r = await api('GET', '/cql/templates');
+  if (!r.success) return;
+  document.getElementById('tplGrid').innerHTML = r.data.map(t => `
+    <button class="tpl-btn" type="button" data-cql="${escAttr(t.cql)}" onclick="document.getElementById('cqlEditor').value=this.dataset.cql">${esc(t.name)}</button>
+  `).join('');
+}
+
+function clearCQL() {
+  document.getElementById('cqlEditor').value = '';
+  document.getElementById('cqlResultWrap').style.display = 'none';
+}
+
+async function execCQL() {
+  const cql = document.getElementById('cqlEditor').value.trim();
+  if (!cql) { toast('请输入 CQL 语句', 'warning'); return; }
+  const wrap = document.getElementById('cqlResultWrap');
+  wrap.style.display = 'block';
+  document.getElementById('cqlResultBody').innerHTML = `<div class="loading" style="padding:24px"><div class="spinner"></div> 执行中...</div>`;
+  document.getElementById('cqlRows').textContent = '';
+  document.getElementById('cqlTime').textContent = '';
+  const r = await api('POST', '/cql/execute', { cql });
+  if (!r.success) {
+    document.getElementById('cqlResultBody').innerHTML = `<div class="cql-error">✕ ${esc(r.error)}</div>`;
+    return;
+  }
+  const { rows, columns, count, elapsed_ms } = r.data;
+  document.getElementById('cqlRows').textContent = `${count} 行`;
+  document.getElementById('cqlTime').textContent = `${elapsed_ms} ms`;
+  if (!rows.length) {
+    document.getElementById('cqlResultBody').innerHTML = `<div class="cql-success-msg">✓ 查询执行成功 — 无返回行</div>`;
+    return;
+  }
+  const cols = columns.length ? columns : Object.keys(rows[0]);
+  document.getElementById('cqlResultBody').innerHTML = `
+    <div class="table-scroll" style="max-height:44vh">
+      <table class="data-table">
+        <thead><tr>${cols.map(c=>`<th>${esc(c)}</th>`).join('')}</tr></thead>
+        <tbody>${rows.map(row=>`<tr>${cols.map(c=>`<td>${esc(String(row[c]??''))}</td>`).join('')}</tr>`).join('')}</tbody>
+      </table>
+    </div>`;
+}
+
+// Ctrl+Enter
+document.getElementById('cqlEditor').addEventListener('keydown', e => {
+  if (e.ctrlKey && e.key === 'Enter') { e.preventDefault(); execCQL(); }
+});
+
+// 点击遮罩关闭
+document.querySelectorAll('.modal-overlay').forEach(o => {
+  o.addEventListener('click', e => { if (e.target === o) closeModal(o.id); });
+});
+
+function doConfirm() {
+  closeModal('mConfirm');
+  if (state.confirmCb) { state.confirmCb(); state.confirmCb = null; }
+}
+</script>
+</body>
+</html>
